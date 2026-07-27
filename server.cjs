@@ -53,8 +53,13 @@ app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 
 // CORS configuration to allow credentials, all HTTP methods and headers for local development & Vercel deployment origins
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
-if (process.env.FRONTEND_URL) {
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'https://farmacia-pro-nine.vercel.app',  // Vercel production frontend
+];
+if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 app.use(cors({
