@@ -14,6 +14,7 @@ import { TareasPage } from './components/pages/TareasPage';
 import { SucursalesPage } from './components/pages/SucursalesPage';
 import { HighCostPatientsPage } from './components/pages/HighCostPatientsPage';
 import { MaintenanceView } from './components/ui/MaintenanceView';
+import { apiFetch } from './lib/api';
 
 function AppContent() {
   const { user, profile, loading, isAdmin, canAccessAltoCosto } = useAuth();
@@ -28,16 +29,42 @@ function AppContent() {
   });
 
   useEffect(() => {
+    const checkBackendMaintenance = async () => {
+      try {
+        const data = await apiFetch('/system/maintenance');
+        if (data && typeof data.maintenance === 'boolean') {
+          setIsMaintenanceMode(data.maintenance);
+          localStorage.setItem('medicontrol_maintenance_mode', data.maintenance ? 'true' : 'false');
+        }
+      } catch (err) {
+        console.warn('Could not fetch backend maintenance status:', err);
+      }
+    };
+    checkBackendMaintenance();
+
     const handleMaintChange = () => {
       setIsMaintenanceMode(localStorage.getItem('medicontrol_maintenance_mode') === 'true');
       setIsBypassed(sessionStorage.getItem('medicontrol_bypass_maintenance') === 'true');
     };
+
     window.addEventListener('maintenanceModeChanged', handleMaintChange);
-    return () => window.removeEventListener('maintenanceModeChanged', handleMaintChange);
+    window.addEventListener('maintenanceModeDetected', handleMaintChange);
+    return () => {
+      window.removeEventListener('maintenanceModeChanged', handleMaintChange);
+      window.removeEventListener('maintenanceModeDetected', handleMaintChange);
+    };
   }, []);
 
-  const toggleMaintenanceMode = () => {
+  const toggleMaintenanceMode = async () => {
     const nextState = !isMaintenanceMode;
+    try {
+      await apiFetch('/system/maintenance', {
+        method: 'POST',
+        body: JSON.stringify({ maintenance: nextState })
+      });
+    } catch (err) {
+      console.error('Error toggling maintenance on backend:', err);
+    }
     localStorage.setItem('medicontrol_maintenance_mode', nextState ? 'true' : 'false');
     if (!nextState) {
       sessionStorage.removeItem('medicontrol_bypass_maintenance');

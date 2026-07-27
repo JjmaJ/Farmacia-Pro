@@ -77,8 +77,16 @@ export function Header({
     return () => window.removeEventListener('maintenanceModeChanged', handleMaintChange);
   }, []);
 
-  const toggleMaintenanceMode = () => {
+  const toggleMaintenanceMode = async () => {
     const nextState = !isMaintenanceMode;
+    try {
+      await apiFetch('/system/maintenance', {
+        method: 'POST',
+        body: JSON.stringify({ maintenance: nextState })
+      });
+    } catch (err) {
+      console.error('Error updating maintenance mode via backend:', err);
+    }
     localStorage.setItem('medicontrol_maintenance_mode', nextState ? 'true' : 'false');
     if (!nextState) {
       sessionStorage.removeItem('medicontrol_bypass_maintenance');

@@ -32,12 +32,20 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     });
 
     if (!response.ok) {
-      let errorData = { error: `Error ${response.status}: ${response.statusText}` };
+      let errorData: any = { error: `Error ${response.status}: ${response.statusText}` };
       try {
         errorData = await response.json();
       } catch (e) {
         // Fallback for non-json
       }
+
+      // Si el servidor devuelve 503/423 o indica modo mantenimiento activo
+      if (response.status === 503 || response.status === 423 || (errorData && errorData.maintenance)) {
+        localStorage.setItem('medicontrol_maintenance_mode', 'true');
+        window.dispatchEvent(new Event('maintenanceModeChanged'));
+        window.dispatchEvent(new CustomEvent('maintenanceModeDetected', { detail: { maintenance: true } }));
+      }
+
       console.error(`API Error ${response.status}:`, errorData);
       throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
     }

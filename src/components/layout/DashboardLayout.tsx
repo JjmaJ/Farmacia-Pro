@@ -5,6 +5,8 @@ import { FloatingHelpButton } from '../ui/FloatingHelpButton';
 import { HelpDrawer } from '../ui/HelpDrawer';
 import { AlertTriangle } from 'lucide-react';
 
+import { apiFetch } from '../../lib/api';
+
 interface DashboardLayoutProps {
   children: ReactNode;
   currentPage: string;
@@ -30,7 +32,15 @@ export function DashboardLayout({ children, currentPage, onNavigate, title, subt
     return () => window.removeEventListener('maintenanceModeChanged', handleMaintChange);
   }, []);
 
-  const disableMaintenance = () => {
+  const disableMaintenance = async () => {
+    try {
+      await apiFetch('/system/maintenance', {
+        method: 'POST',
+        body: JSON.stringify({ maintenance: false })
+      });
+    } catch (err) {
+      console.error('Error disabling maintenance mode on backend:', err);
+    }
     localStorage.setItem('medicontrol_maintenance_mode', 'false');
     sessionStorage.removeItem('medicontrol_bypass_maintenance');
     window.dispatchEvent(new Event('maintenanceModeChanged'));

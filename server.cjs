@@ -235,6 +235,125 @@ const isAdminUser = async (userId, userEmail) => {
   }
 };
 
+// === SYSTEM MAINTENANCE MODE (PERSISTED IN DB & GLOBAL MIDDLEWARE) ===
+let isMaintenanceModeActive = false;
+
+async function syncMaintenanceMode() {
+  try {
+    await pool.query(`
+      ALTER TABLE system_configuration 
+      ADD COLUMN IF NOT EXISTS is_maintenance_mode BOOLEAN DEFAULT false;
+    `).catch(() => {});
+    
+    const res = await pool.query('SELECT is_maintenance_mode FROM system_configuration LIMIT 1');
+    if (res.rows.length > 0) {
+      isMaintenanceModeActive = !!res.rows[0].is_maintenance_mode;
+    }
+    console.log(`[Maintenance] Initial state: ${isMaintenanceModeActive ? 'ACTIVE (LOCKED)' : 'INACTIVE (NORMAL)'}`);
+  } catch (err) {
+    console.warn('[Maintenance] Could not sync maintenance state from DB:', err);
+  }
+}
+syncMaintenanceMode();
+
+// Express Middleware: Intercepts all API traffic when Maintenance Mode is Active
+const checkMaintenanceMode = async (req, res, next) => {
+  if (!isMaintenanceModeActive) {
+    return next();
+  }
+
+  // Exempt routes (public login & maintenance status check)
+  const allowedPaths = [
+    '/api/auth/login',
+    '/api/system/maintenance'
+  ];
+
+  if (allowedPaths.some(p => req.path.startsWith(p)) || req.method === 'OPTIONS') {
+    return next();
+  }
+
+  // Check if token belongs to Super Admin / Admin
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded && (await isAdminUser(decoded.id, decoded.email))) {
+        return next();
+      }
+    } catch (e) {
+      // Invalid token
+    }
+  }
+
+  // Reject non-admin requests with HTTP 503 Service Unavailable
+  return res.status(503).json({
+    error: 'El sistema se encuentra en mantenimiento programado.',
+    maintenance: true
+  });
+};
+
+app.use('/api', checkMaintenanceMode);
+
+// Public check maintenance status
+app.get('/api/system/maintenance', async (req, res) => {
+  try {
+    const dbRes = await pool.query('SELECT is_maintenance_mode FROM system_configuration LIMIT 1').catch(() => ({ rows: [] }));
+    if (dbRes.rows.length > 0) {
+      isMaintenanceModeActive = !!dbRes.rows[0].is_maintenance_mode;
+    }
+    res.status(200).json({ maintenance: isMaintenanceModeActive });
+  } catch (err) {
+    res.status(200).json({ maintenance: isMaintenanceModeActive });
+  }
+});
+
+// Admin toggle maintenance status (persists in PostgreSQL DB and memory)
+app.post('/api/system/maintenance', authenticateToken, async (req, res) => {
+  if (!(await isAdminUser(req.user.id, req.user.email))) {
+    return res.status(403).json({ error: 'Solo los administradores pueden modificar el modo mantenimiento' });
+  }
+
+  const { maintenance } = req.body;
+  const nextState = !!maintenance;
+
+  try {
+    await pool.query(`
+      ALTER TABLE system_configuration 
+      ADD COLUMN IF NOT EXISTS is_maintenance_mode BOOLEAN DEFAULT false;
+    `).catch(() => {});
+
+    const existing = await pool.query('SELECT id FROM system_configuration LIMIT 1');
+    if (existing.rows.length > 0) {
+      await pool.query(
+        'UPDATE system_configuration SET is_maintenance_mode = $1, updated_at = NOW() WHERE id = $2',
+        [nextState, existing.rows[0].id]
+      );
+    } else {
+      await pool.query(
+        'INSERT INTO system_configuration (hospital_name, is_maintenance_mode) VALUES ($1, $2)',
+        ['Hospital Central', nextState]
+      );
+    }
+
+    isMaintenanceModeActive = nextState;
+
+    // Record audit log entry
+    await pool.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, details, ip_address) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      [req.user.id, 'MAINTENANCE_TOGGLE', 'SYSTEM', JSON.stringify({ maintenance: nextState, updated_by: req.user.email }), req.ip]
+    ).catch(() => {});
+
+    console.log(`[Maintenance] Updated maintenance state to ${nextState} by ${req.user.email}`);
+    res.status(200).json({ success: true, maintenance: isMaintenanceModeActive });
+  } catch (err) {
+    console.error('Error updating maintenance mode:', err);
+    res.status(500).json({ error: 'Error al actualizar el modo mantenimiento en la base de datos' });
+  }
+});
+
 // === AUTHENTICATION ENDPOINTS ===
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
