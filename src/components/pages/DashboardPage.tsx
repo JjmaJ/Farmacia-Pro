@@ -48,7 +48,7 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({ onNavigate }: DashboardPageProps) {
-  const { profile } = useAuth();
+  const { profile, canDispatch } = useAuth();
 
   const [stats, setStats] = useState({
     totalProducts: 0,
@@ -185,36 +185,40 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     {
       title: 'Total Productos',
       value: stats.totalProducts,
+      suffix: 'artículos',
       icon: Package,
       color: 'blue',
-      description: 'Medicamentos registrados',
+      description: 'Medicamentos registrados en inventario',
       progress: '100%',
       progressBarColor: 'bg-blue-500',
     },
     {
       title: 'Bajo Stock',
       value: stats.lowStock,
+      suffix: 'lotes',
       icon: AlertTriangle,
       color: 'amber',
-      description: 'Lotes requieren atencion',
+      description: 'Lotes requieren reposición urgente',
       progress: stats.totalProducts > 0 ? `${Math.min(100, Math.round((stats.lowStock / stats.totalProducts) * 100))}%` : '0%',
       progressBarColor: 'bg-amber-500',
     },
     {
       title: 'Movimientos (7d)',
       value: stats.recentMovements,
+      suffix: 'mov.',
       icon: Activity,
       color: 'emerald',
-      description: 'Entradas y salidas',
+      description: 'Entradas y salidas recientes',
       progress: '70%',
       progressBarColor: 'bg-emerald-500',
     },
     {
       title: 'Por Vencer (30d)',
       value: stats.expiringSoon,
+      suffix: 'lotes',
       icon: Clock,
       color: 'red',
-      description: 'Lotes en riesgo',
+      description: 'Lotes próximos a vencer',
       progress: stats.totalProducts > 0 ? `${Math.min(100, Math.round((stats.expiringSoon / stats.totalProducts) * 100))}%` : '0%',
       progressBarColor: 'bg-red-500',
     },
@@ -326,19 +330,21 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             </div>
           </div>
 
-          {/* Quick Action Buttons */}
+          {/* Quick Action Buttons — se oculta "Registrar Entrega" para médicos/enfermeros */}
           <div className="flex flex-wrap gap-2 flex-shrink-0">
-            <button
-              onClick={() => onNavigate && onNavigate('deliveries')}
-              className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-500/20 hover:scale-[1.02] transition-all duration-200"
-            >
-              + Registrar Entrega
-            </button>
+            {canDispatch && (
+              <button
+                onClick={() => onNavigate && onNavigate('deliveries')}
+                className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-500/20 hover:scale-[1.02] transition-all duration-200"
+              >
+                + Registrar Entrega
+              </button>
+            )}
             <button
               onClick={() => onNavigate && onNavigate('inventory')}
               className="px-3.5 py-2 bg-white hover:bg-blue-50 text-blue-700 text-xs font-bold rounded-xl border border-blue-200 hover:scale-[1.02] transition-all duration-200 shadow-sm"
             >
-              Gestionar Catálogo
+              {canDispatch ? 'Gestionar Catálogo' : 'Ver Inventario'}
             </button>
             <button
               onClick={() => onNavigate && onNavigate('tareas')}
@@ -393,7 +399,12 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
                 </span>
               </div>
               <div>
-                <h3 className="text-3xl font-extrabold text-slate-800 tracking-tight">{stat.value}</h3>
+                <h3 className="text-3xl font-extrabold text-slate-800 tracking-tight">
+                  {stat.value}
+                  {(stat as any).suffix && (
+                    <span className="text-sm font-semibold text-slate-400 ml-1.5">{(stat as any).suffix}</span>
+                  )}
+                </h3>
                 <p className="text-sm font-bold text-slate-700 mt-1">{stat.title}</p>
                 <p className="text-xs text-slate-400 mt-1 font-medium leading-relaxed">{stat.description}</p>
               </div>

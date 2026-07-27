@@ -26,7 +26,7 @@ const DELIVERIES_HELP = [
 ];
 
 export function DeliveriesPage() {
-  const { profile } = useAuth();
+  const { profile, canDispatch } = useAuth();
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -136,16 +136,24 @@ export function DeliveriesPage() {
             Gestiona y registra las salidas de medicamentos del inventario.
           </p>
         </div>
-        <Tooltip content="Registrar despacho de medicamentos descontando del stock disponible" position="left">
-          <button
-            id="btn-nueva-entrega"
-            onClick={() => { setShowAddModal(true); setFormError(null); }}
-            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition shadow-md font-bold text-sm"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Nueva Entrega
-          </button>
-        </Tooltip>
+        {/* Botón Nueva Entrega — oculto para roles solo-lectura */}
+        {canDispatch ? (
+          <Tooltip content="Registrar despacho de medicamentos descontando del stock disponible" position="left">
+            <button
+              id="btn-nueva-entrega"
+              onClick={() => { setShowAddModal(true); setFormError(null); }}
+              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition shadow-md font-bold text-sm"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Nueva Entrega
+            </button>
+          </Tooltip>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs font-semibold">
+            <AlertCircle className="w-4 h-4 text-amber-500" />
+            Solo Visualización — Tu rol no puede registrar despachos
+          </span>
+        )}
       </div>
 
       {/* Ayuda contextual del módulo */}

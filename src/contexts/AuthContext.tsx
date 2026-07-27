@@ -21,6 +21,12 @@ interface AuthContextType {
   canManageInventory: boolean;
   canEditInventory: boolean;
   canAccessAltoCosto: boolean;
+  /** Solo Admin Maestro (Administrator) */
+  isSuperAdmin: boolean;
+  /** Si el rol es Médico o Enfermero (solo lectura) — NO pueden despachar */
+  isReadOnly: boolean;
+  /** Puede registrar entregas/despachos */
+  canDispatch: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -162,9 +168,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     updatePassword,
     switchSucursal,
     isAdmin: profile?.role === 'Administrator' || profile?.role === 'admin',
+    isSuperAdmin: profile?.role === 'Administrator' || profile?.role === 'admin',
     canManageInventory: ['Administrator', 'admin', 'technical_assistant', 'warehouse_keeper', 'Warehouse_Keeper'].includes(profile?.role || ''),
     canEditInventory: ['Administrator', 'admin', 'technical_assistant'].includes(profile?.role || ''),
-    canAccessAltoCosto: profile?.role === 'Pharmacist' || profile?.can_access_alto_costo || false
+    canAccessAltoCosto: profile?.role === 'Pharmacist' || profile?.can_access_alto_costo || false,
+    // Médicos y Enfermeros son solo lectura
+    isReadOnly: ['Doctor', 'Nurse', 'Médico', 'Enfermero', 'doctor', 'nurse', 'medico', 'enfermero'].includes(profile?.role || ''),
+    canDispatch: !['Doctor', 'Nurse', 'Médico', 'Enfermero', 'doctor', 'nurse', 'medico', 'enfermero'].includes(profile?.role || '')
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

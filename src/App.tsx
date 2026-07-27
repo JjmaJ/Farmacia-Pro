@@ -62,13 +62,17 @@ function AppContent() {
     );
   }
 
-  // Si la aplicación está en modo mantenimiento
+  // ─── MAINTENANCE GUARD ─────────────────────────────────────────────────
+  // Si mantenimiento está activo, usuarios NO-admin siempre ven la pantalla de mantenimiento.
+  // El admin TAMBIÉN la ve (con controles), a menos que haya elegido "Bypass Admin" 
+  // (sessionStorage flag set from MaintenanceView).
   if (isMaintenanceMode) {
-    // Si no ha iniciado sesión, o no es admin, o es admin pero no ha activado la opción de bypass
-    if (!user || !profile || !isAdmin || (!isBypassed && isAdmin)) {
+    const bypassed = isBypassed && isAdmin;
+    if (!bypassed) {
       return <MaintenanceView onToggleMaintenance={toggleMaintenanceMode} />;
     }
   }
+  // ───────────────────────────────────────────────────────────────────────
 
   if (!user || !profile) {
     console.log('App: Redirecting to AuthPage. user:', user, 'profile:', profile);
