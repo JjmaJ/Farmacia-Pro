@@ -1,11 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   X,
   Search,
   HelpCircle,
   BookOpen,
-  CheckCircle2,
-  Sparkles,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -18,13 +16,9 @@ import {
   LayoutDashboard,
   FileText,
   Database,
-  Settings,
   CheckSquare,
   Building2,
-  HardDrive,
   Lightbulb,
-  Zap,
-  Check,
   Info
 } from 'lucide-react';
 
@@ -311,7 +305,7 @@ const MODULES_INFO = [
 // ============================================================
 // COMPONENTE PRINCIPAL HELP DRAWER / MODAL DE MANUAL
 // ============================================================
-export function HelpDrawer({ isOpen, onClose, currentPage = 'general' }: HelpDrawerProps) {
+export function HelpDrawer({ isOpen, onClose, currentPage: _currentPage = 'general' }: HelpDrawerProps) {
   const [activeTab, setActiveTab] = useState<'guia' | 'roles' | 'faq'>('guia');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedFaq, setExpandedFaq] = useState<number | null>(0);

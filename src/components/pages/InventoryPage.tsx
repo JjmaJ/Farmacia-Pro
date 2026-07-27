@@ -512,8 +512,8 @@ export function InventoryPage() {
                   <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition"><div className="flex items-center">Nombre <ArrowUpDown className="w-3 h-3 ml-1" /></div></th>
                   <th className="px-6 py-4">Categoria</th>
                   <th className="px-6 py-4">Presentacion</th>
-                  <th className="px-6 py-4 text-center">Stock Actual</th>
-                  <th className="px-6 py-4 text-center">Stock Min.</th>
+                  <th className="px-6 py-4 text-center">Stock Actual (und.)</th>
+                  <th className="px-6 py-4 text-center">Stock Mín. (und.)</th>
                   <th className="px-6 py-4">Receta</th>
                   <th className="px-6 py-4 text-right">Acciones</th>
                 </tr>
@@ -580,11 +580,11 @@ export function InventoryPage() {
                           <td className="px-6 py-4 text-gray-600">{med.presentation}</td>
                           <td className="px-6 py-4 text-center">
                             <span className={`font-bold ${stockVacio ? 'text-red-600' : stockBajo ? 'text-amber-600' : 'text-green-600'}`}>
-                              {stockActual}
+                              {stockActual} und.
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center font-medium text-gray-900">
-                            {med.min_stock_level || 0}
+                            {med.min_stock_level || 0} und.
                           </td>
                           <td className="px-6 py-4">
                             {med.requires_prescription ? (

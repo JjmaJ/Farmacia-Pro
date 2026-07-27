@@ -567,7 +567,7 @@ export function StatisticsPage() {
                       <th className="px-4 py-3">Medicamento / Presentación</th>
                       <th className="px-4 py-3 text-center">Salida Período A</th>
                       <th className="px-4 py-3 text-center">Salida Período B</th>
-                      <th className="px-4 py-3 text-center">Diferencia ($\Delta$)</th>
+                      <th className="px-4 py-3 text-center">Diferencia (unidades)</th>
                       <th className="px-4 py-3 text-center">Variación %</th>
                       <th className="px-4 py-3 text-center">Indicador de Rotación</th>
                     </tr>

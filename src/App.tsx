@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthPage } from './components/auth/AuthPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
@@ -13,10 +13,38 @@ import { SettingsPage } from './components/pages/SettingsPage';
 import { TareasPage } from './components/pages/TareasPage';
 import { SucursalesPage } from './components/pages/SucursalesPage';
 import { HighCostPatientsPage } from './components/pages/HighCostPatientsPage';
+import { MaintenanceView } from './components/ui/MaintenanceView';
 
 function AppContent() {
   const { user, profile, loading, isAdmin, canAccessAltoCosto } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
+
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(() => {
+    return localStorage.getItem('medicontrol_maintenance_mode') === 'true';
+  });
+
+  const [isBypassed, setIsBypassed] = useState(() => {
+    return sessionStorage.getItem('medicontrol_bypass_maintenance') === 'true';
+  });
+
+  useEffect(() => {
+    const handleMaintChange = () => {
+      setIsMaintenanceMode(localStorage.getItem('medicontrol_maintenance_mode') === 'true');
+      setIsBypassed(sessionStorage.getItem('medicontrol_bypass_maintenance') === 'true');
+    };
+    window.addEventListener('maintenanceModeChanged', handleMaintChange);
+    return () => window.removeEventListener('maintenanceModeChanged', handleMaintChange);
+  }, []);
+
+  const toggleMaintenanceMode = () => {
+    const nextState = !isMaintenanceMode;
+    localStorage.setItem('medicontrol_maintenance_mode', nextState ? 'true' : 'false');
+    if (!nextState) {
+      sessionStorage.removeItem('medicontrol_bypass_maintenance');
+    }
+    setIsMaintenanceMode(nextState);
+    window.dispatchEvent(new Event('maintenanceModeChanged'));
+  };
 
   if (loading) {
     return (
@@ -32,6 +60,19 @@ function AppContent() {
         </div>
       </div>
     );
+  }
+
+  // Si la aplicación está en modo mantenimiento y el usuario no es admin (o el admin no ha activado bypass)
+  if (isMaintenanceMode && (!isAdmin || (!isBypassed && isMaintenanceMode))) {
+    // Si no ha iniciado sesión y hay mantenimiento
+    if (!user || !profile) {
+      return <MaintenanceView onToggleMaintenance={toggleMaintenanceMode} />;
+    }
+
+    // Si ha iniciado sesión pero NO es administrador
+    if (!isAdmin) {
+      return <MaintenanceView onToggleMaintenance={toggleMaintenanceMode} />;
+    }
   }
 
   if (!user || !profile) {
