@@ -13,7 +13,7 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-medicontrol-key';
 
 // === HELMET SECURITY HEADERS ===
@@ -25,7 +25,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:", "http://localhost:*", "https://*.supabase.co", "https://media.giphy.com", "https://media4.giphy.com"],
-      connectSrc: ["'self'", "http://localhost:*", "ws://localhost:*", "https://*.supabase.co"],
+      connectSrc: ["'self'", "http://localhost:*", "ws://localhost:*", "https://*.supabase.co", "https://*.vercel.app", "https://*.onrender.com"],
     },
   },
 }));
@@ -52,11 +52,14 @@ const authLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 
-// CORS configuration to allow credentials, all HTTP methods and headers for local development origins
+// CORS configuration to allow credentials, all HTTP methods and headers for local development & Vercel deployment origins
 const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+    if (!origin || allowedOrigins.includes(origin) || /^https?:\/\/(.*\.vercel\.app|localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
       callback(null, true);
     } else {
       callback(null, true); // Fallback allow in dev
