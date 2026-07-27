@@ -62,15 +62,10 @@ function AppContent() {
     );
   }
 
-  // Si la aplicación está en modo mantenimiento y el usuario no es admin (o el admin no ha activado bypass)
-  if (isMaintenanceMode && (!isAdmin || (!isBypassed && isMaintenanceMode))) {
-    // Si no ha iniciado sesión y hay mantenimiento
-    if (!user || !profile) {
-      return <MaintenanceView onToggleMaintenance={toggleMaintenanceMode} />;
-    }
-
-    // Si ha iniciado sesión pero NO es administrador
-    if (!isAdmin) {
+  // Si la aplicación está en modo mantenimiento
+  if (isMaintenanceMode) {
+    // Si no ha iniciado sesión, o no es admin, o es admin pero no ha activado la opción de bypass
+    if (!user || !profile || !isAdmin || (!isBypassed && isAdmin)) {
       return <MaintenanceView onToggleMaintenance={toggleMaintenanceMode} />;
     }
   }
