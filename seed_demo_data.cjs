@@ -8,6 +8,7 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   port: parseInt(process.env.DB_PORT || '5432', 10),
   database: process.env.DB_NAME || 'medicontrol',
+  ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
 });
 
 // Helper to generate random date within last N days
