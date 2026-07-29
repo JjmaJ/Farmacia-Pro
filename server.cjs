@@ -93,13 +93,12 @@ const mailTransporter = nodemailer.createTransport({
   port: parseInt(process.env.SMTP_PORT || '587', 10),
   secure: process.env.SMTP_SECURE === 'true', // false for port 587 (STARTTLS), true for 465 (SSL)
   auth: {
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
+    user: process.env.SMTP_USER || 'joel.miranda2009@gmail.com',
+    pass: process.env.SMTP_PASS || 'zmnllcztenaonasm',
   },
   tls: {
     rejectUnauthorized: false, // Accept self-signed certs in dev environment
   },
-  requireTLS: process.env.SMTP_SECURE !== 'true', // Require STARTTLS for port 587
 });
 
 // Ensure Super Admin user exists in DB
@@ -611,16 +610,21 @@ app.get('/api/auth/user', authenticateToken, async (req, res) => {
 app.post('/api/auth/reset-password', async (req, res) => {
   const { email } = req.body;
   
-  if (!email) {
+  if (!email || !email.trim()) {
     return res.status(400).json({ error: 'El correo electrónico es requerido.' });
   }
 
+  const cleanEmail = email.trim().toLowerCase();
+
   try {
-    // 1. Check if user exists in the database
-    const userRes = await pool.query('SELECT id, email FROM users WHERE email = $1', [email]);
+    // 1. Check if user exists in the database (case-insensitive & whitespace trimmed)
+    const userRes = await pool.query(
+      'SELECT id, email FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))', 
+      [cleanEmail]
+    );
     
     if (userRes.rows.length === 0) {
-      console.log(`[Password Reset Request] Email ${email} not found. Returning success for security.`);
+      console.log(`[Password Reset Request] Email ${cleanEmail} not found. Returning success for security.`);
       // For security, return success even if user not found, so users can't enumerate register status
       return res.status(200).json({ message: 'Se ha enviado un código de recuperación si la cuenta existe.' });
     }
@@ -638,8 +642,9 @@ app.post('/api/auth/reset-password', async (req, res) => {
     );
 
     // 4. Send recovery email with OTP code
+    const senderFrom = process.env.SMTP_FROM || '"MediControl Pro" <joel.miranda2009@gmail.com>';
     const mailOptions = {
-      from: process.env.SMTP_FROM || '"MediControl Pro" <no-reply@medicontrol.com>',
+      from: senderFrom,
       to: user.email,
       subject: 'Código de Recuperación - MediControl Pro',
       html: `
@@ -662,13 +667,13 @@ app.post('/api/auth/reset-password', async (req, res) => {
     };
 
     await mailTransporter.sendMail(mailOptions);
-    console.log(`[Password Reset OTP] Code successfully sent to ${email}`);
+    console.log(`[Password Reset OTP] Code successfully sent to ${user.email}`);
 
     res.status(200).json({ message: 'Se ha enviado un código de recuperación si la cuenta existe.' });
 
   } catch (err) {
     console.error('[Password Reset Error]:', err);
-    res.status(500).json({ error: 'Error del servidor al procesar la recuperación de contraseña.' });
+    res.status(500).json({ error: 'Error del servidor al procesar la recuperación de contraseña: ' + (err.message || 'Error de envío de correo.') });
   }
 });
 
@@ -679,16 +684,19 @@ app.post('/api/auth/update-password', async (req, res) => {
     return res.status(400).json({ error: 'El correo, el código y la nueva contraseña son requeridos.' });
   }
 
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanToken = token.trim();
+
   const passwordError = validatePasswordStrength(newPassword);
   if (passwordError) {
     return res.status(400).json({ error: passwordError });
   }
 
   try {
-    // 1. Find user with email, valid token (code)
+    // 1. Find user with email (case-insensitive), valid token (code)
     const userRes = await pool.query(
-      'SELECT id, reset_token_expires FROM users WHERE email = $1 AND reset_token = $2',
-      [email, token]
+      'SELECT id, reset_token_expires FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) AND reset_token = $2',
+      [cleanEmail, cleanToken]
     );
 
     if (userRes.rows.length === 0) {

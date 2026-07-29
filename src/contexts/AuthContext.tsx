@@ -128,14 +128,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = async (email: string) => {
     await apiFetch('/auth/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email: email.trim().toLowerCase() })
     });
   };
 
   const updatePassword = async (email: string, code: string, newPassword: string) => {
     await apiFetch('/auth/update-password', {
       method: 'POST',
-      body: JSON.stringify({ email, token: code, newPassword })
+      body: JSON.stringify({ email: email.trim().toLowerCase(), token: code.trim(), newPassword })
     });
   };
 
